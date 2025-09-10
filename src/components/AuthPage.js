@@ -1,52 +1,56 @@
 import React, { useState } from "react";
-import { FaGoogle, FaFacebook, FaInstagram } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import "./Auth.css";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(true); // for user only
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [users, setUsers] = useState([]); // store users locally
-  const [message, setMessage] = useState(""); // message to show in box
-  const [messageColor, setMessageColor] = useState("red"); // red for error, green for success
+  const [users, setUsers] = useState([]); // store user accounts
+  const [message, setMessage] = useState("");
+  const [messageColor, setMessageColor] = useState("red");
 
-  // Simple email validation
-  const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
+  const navigate = useNavigate();
+
+  // Predefined admin
+  const admin = { email: "neeta@gmail.com", password: "123456" };
 
   const handleAuth = () => {
     if (!email || !password) {
-      setMessage("Login credentials are empty.");
+      setMessage("Credentials cannot be empty");
       setMessageColor("red");
       return;
     }
 
+    // Check for admin credentials
+    if (email === admin.email && password === admin.password) {
+      setMessage("Admin login successful!");
+      setMessageColor("green");
+      navigate("/admin");
+      return;
+    }
+
+    // User login/signup
     if (isLogin) {
       const user = users.find((u) => u.email === email);
       if (!user) {
         setMessage("User not found. Please sign up first.");
         setMessageColor("red");
       } else if (user.password !== password) {
-        setMessage("Login credentials are incorrect.");
+        setMessage("Incorrect password.");
         setMessageColor("red");
       } else {
         setMessage("Login successful!");
         setMessageColor("green");
+        navigate("/user");
       }
     } else {
-      // SIGNUP validations
-      if (!validateEmail(email)) {
-        setMessage("Invalid email format.");
-        setMessageColor("red");
-        return;
-      }
-      if (password.length < 6) {
-        setMessage("Password must be at least 6 characters.");
-        setMessageColor("red");
-        return;
-      }
-      const exists = users.find((u) => u.email === email);
-      if (exists) {
+      // Signup
+      if (users.find((u) => u.email === email)) {
         setMessage("User already exists. Please login.");
+        setMessageColor("red");
+      } else if (password.length < 6) {
+        setMessage("Password must be at least 6 characters.");
         setMessageColor("red");
       } else {
         setUsers([...users, { email, password }]);
@@ -63,7 +67,7 @@ export default function AuthPage() {
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <h2>{isLogin ? "Login" : "Sign Up"} to One</h2>
+        <h2>{isLogin ? "Login" : "Sign Up"}</h2>
 
         {message && <p style={{ color: messageColor }}>{message}</p>}
 
@@ -79,7 +83,6 @@ export default function AuthPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        {isLogin && <p className="forgot">Forgot Password?</p>}
 
         <button onClick={handleAuth}>{isLogin ? "Login" : "Get Started"}</button>
 
@@ -89,18 +92,6 @@ export default function AuthPage() {
             {isLogin ? "Sign Up" : "Login"}
           </span>
         </p>
-
-        <div className="social-login">
-          <button className="google">
-            <FaGoogle /> Google
-          </button>
-          <button className="facebook">
-            <FaFacebook /> Facebook
-          </button>
-          <button className="instagram">
-            <FaInstagram /> Instagram
-          </button>
-        </div>
       </div>
     </div>
   );
