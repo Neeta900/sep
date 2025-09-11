@@ -1,67 +1,63 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth, googleProvider } from "../firebase";
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import "./Auth.css";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true); // for user only
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [users, setUsers] = useState([]); // store user accounts
   const [message, setMessage] = useState("");
   const [messageColor, setMessageColor] = useState("red");
 
   const navigate = useNavigate();
 
-  // Predefined admin
-  const admin = { email: "neeta@gmail.com", password: "123456" };
-
-  const handleAuth = () => {
+  const handleAuth = async () => {
     if (!email || !password) {
       setMessage("Credentials cannot be empty");
       setMessageColor("red");
       return;
     }
 
-    // Check for admin credentials
-    if (email === admin.email && password === admin.password) {
-      setMessage("Admin login successful!");
-      setMessageColor("green");
-      navigate("/admin");
-      return;
-    }
-
-    // User login/signup
-    if (isLogin) {
-      const user = users.find((u) => u.email === email);
-      if (!user) {
-        setMessage("User not found. Please sign up first.");
-        setMessageColor("red");
-      } else if (user.password !== password) {
-        setMessage("Incorrect password.");
-        setMessageColor("red");
-      } else {
+    try {
+      if (isLogin) {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const token = await cred.user.getIdToken();
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify({ email: cred.user.email, role: "user" }));
         setMessage("Login successful!");
         setMessageColor("green");
         navigate("/user");
-      }
-    } else {
-      // Signup
-      if (users.find((u) => u.email === email)) {
-        setMessage("User already exists. Please login.");
-        setMessageColor("red");
-      } else if (password.length < 6) {
-        setMessage("Password must be at least 6 characters.");
-        setMessageColor("red");
       } else {
-        setUsers([...users, { email, password }]);
+        await createUserWithEmailAndPassword(auth, email, password);
         setMessage("Signup successful! Please login now.");
         setMessageColor("green");
         setIsLogin(true);
       }
+    } catch (e) {
+      setMessage(e.message || "Authentication failed");
+      setMessageColor("red");
     }
 
     setEmail("");
     setPassword("");
+  };
+
+  const handleGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const token = await user.getIdToken();
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify({ email: user.email, role: "user" }));
+      setMessage("Login successful!");
+      setMessageColor("green");
+      navigate("/user");
+    } catch (e) {
+      setMessage(e.message || "Google sign-in failed");
+      setMessageColor("red");
+    }
   };
 
   return (
@@ -85,6 +81,9 @@ export default function AuthPage() {
         />
 
         <button onClick={handleAuth}>{isLogin ? "Login" : "Get Started"}</button>
+        <div className="social-login">
+          <button className="google" onClick={handleGoogle}>Continue with Google</button>
+        </div>
 
         <p>
           {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
